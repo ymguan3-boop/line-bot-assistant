@@ -91,29 +91,40 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 原有的 webhook 路由
-app.post('/webhook', line.middleware(config), (req, res) => {
-  // ... 你的 webhook 處理代碼
-});
-// Webhook 路由
-app.post('/webhook', line.middleware(config), async (req, res) => {
-  try {
-    const events = req.body.events;
-    await Promise.all(events.map(handleEvent));
-    res.status(200).send('OK');
-  } catch (err) {
-    console.error(err);
-    res.status(500).end();
-  }
+// 健康檢查端點
+app.get('/', (req, res) => {
+  res.status(200).send('LINE Bot is running! ✅');
 });
 
-// 健康檢查
-app.get('/', (req, res) => {
-  res.send('LINE Bot is running!');
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Webhook 路由 - 立即響應版本
+app.post('/webhook', line.middleware(config), (req, res) => {
+  // 立即回應 200 OK 給 LINE 平台
+  res.status(200).end();
+  
+  // 異步處理所有事件,不阻塞響應
+  if (req.body.events && req.body.events.length > 0) {
+    req.body.events.forEach(event => {
+      handleEvent(event).catch(err => {
+        console.error('處理事件時發生錯誤:', err);
+      });
+    });
+  }
 });
 
 // 處理事件
 async function handleEvent(event) {
+  // 只處理訊息和 postback 事件
+  if (event.type !== 'message' && event.type !== 'postback') {
+    return;
+  }
+
   const userId = event.source.userId;
   const timestamp = new Date(event.timestamp);
   const timeString = timestamp.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
@@ -126,7 +137,7 @@ async function handleEvent(event) {
   } catch (err) {
     console.error('無法取得用戶資訊:', err);
   }
-
+  
   // 處理文字訊息
   if (event.type === 'message' && event.message.type === 'text') {
     const userMessage = event.message.text.trim();
@@ -143,7 +154,7 @@ async function handleEvent(event) {
       content: userMessage
     });
     saveData(CONVERSATIONS_FILE, conversations);
-
+    
     // 檢查用戶狀態
     const userState = userStates.get(userId);
     
@@ -153,6 +164,30 @@ async function handleEvent(event) {
       await handleCommand(event, userId, userName, userMessage, timeString);
     }
   }
+  
+  // 處理其他類型的訊息(圖片、影片等)
+  if (event.type === 'message' && event.message.type !== 'text') {
+    // 記錄非文字訊息
+    const conversations = loadData(CONVERSATIONS_FILE);
+    conversations.push({
+      id: event.message.id,
+      time: timeString,
+      timestamp: timestamp.getTime(),
+      user: userName,
+      userId: userId,
+      type: event.message.type,
+      content: `[${event.message.type}]`
+    });
+    saveData(CONVERSATIONS_FILE, conversations);
+  }
+  
+  // 處理 postback 事件
+  if (event.type === 'postback') {
+    const data = event.postback.data;
+    // 你的 postback 處理邏輯
+    console.log('Postback data:', data);
+  }
+}
   
   // 處理附件
   else if (event.type === 'message' && ['image', 'video', 'audio', 'file'].includes(event.message.type)) {
@@ -796,5 +831,6 @@ app.listen(PORT, () => {
   console.log(`📁 資料目錄: ${DATA_DIR}`);
   console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });
+
 
 
