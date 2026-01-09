@@ -9,8 +9,8 @@ const app = express();
 
 // LINE Bot 設定
 const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
 };
 
 const client = new line.Client(config);
@@ -781,3 +781,4 @@ app.listen(PORT, () => {
   console.log(`📁 資料目錄: ${DATA_DIR}`);
   console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });
+
