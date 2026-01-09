@@ -750,12 +750,12 @@ const transporter = createTransporter();
 const mailOptions = {
 from: `"LINE Bot 助手" <${process.env.SMTP_USER}>`,
 to: recipientEmail,
-subject: LINE 對話紀錄匯出 - ${new Date().toLocaleDateString('zh-TW')},
+subject: `LINE 對話紀錄匯出 - ${new Date().toLocaleDateString('zh-TW')}`,
 html: emailContent,
 attachments: attachments
 };
 await transporter.sendMail(mailOptions);
-console.log(郵件已發送到: ${recipientEmail});
+console.log(`郵件已發送到: ${recipientEmail}`);
 }
 // 自動回應
 function generateAutoReply(message) {
@@ -778,4 +778,5 @@ console.log(`✅ Server is running on port ${PORT}`);
 console.log(`📁 資料目錄: ${DATA_DIR}`);
 console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });</parameter>
+
 
