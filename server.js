@@ -680,105 +680,104 @@ async function sendEmailSummary(recipientEmail) {
     
     const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
     
-conversations.forEach((log, index) => {
-  let content = log.content || '';
-  if (log.type !== 'text') {
-    content = `[${getFileTypeName(log.type)}] ${log.filename || ''}`;
+    emailContent += `<tr style="background-color: ${bgColor};">
+      <td>${log.time}</td>
+      <td>${log.user}</td>
+      <td>${log.type}</td>
+      <td>${content}</td>
+    </tr>`;
+  });
+
+  emailContent += '</table>';
+  
+  const events = loadData(EVENTS_FILE);
+  if (events.length > 0) {
+    emailContent += '<br><h3>📅 行程紀錄</h3>';
+    emailContent += '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">';
+    emailContent += '<tr style="background-color: #2196F3; color: white;"><th>標題</th><th>日期</th><th>描述</th><th>建立時間</th></tr>';
+    events.forEach((event, index) => {
+      const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+      emailContent += `<tr style="background-color: ${bgColor};">
+        <td>${event.title}</td>
+        <td>${event.date}</td>
+        <td>${event.description || '-'}</td>
+        <td>${event.createdAt}</td>
+      </tr>`;
+    });
+    emailContent += '</table>';
   }
-
-  const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
-
-  emailContent += `<tr style="background-color: ${bgColor};">
-    <td>${log.time}</td>
-    <td>${log.user}</td>
-    <td>${log.type}</td>
-    <td>${content}</td>
-  </tr>`;
-});
-
-emailContent += '</table>';
-const events = loadData(EVENTS_FILE);
-if (events.length > 0) {
-emailContent += '<br><h3>📅 行程紀錄</h3>';
-emailContent += '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">';
-emailContent += '<tr style="background-color: #2196F3; color: white;"><th>標題</th><th>日期</th><th>描述</th><th>建立時間</th></tr>';
-events.forEach((event, index) => {
-  const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
-  emailContent += `<tr style="background-color: ${bgColor};">
-    <td>${event.title}</td>
-    <td>${event.date}</td>
-    <td>${event.description || '-'}</td>
-    <td>${event.createdAt}</td>
-  </tr>`;
-});
-
-emailContent += '</table>';
+  
+  const expenses = loadData(EXPENSES_FILE);
+  if (expenses.length > 0) {
+    emailContent += '<br><h3>💰 花費紀錄</h3>';
+    emailContent += '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">';
+    emailContent += '<tr style="background-color: #FF9800; color: white;"><th>項目</th><th>金額</th><th>類別</th><th>日期時間</th></tr>';
+    let total = 0;
+    expenses.forEach((expense, index) => {
+      const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+      emailContent += `<tr style="background-color: ${bgColor};">
+        <td>${expense.item}</td>
+        <td>NT$ ${expense.amount.toLocaleString()}</td>
+        <td>${expense.category}</td>
+        <td>${expense.datetime}</td>
+      </tr>`;
+      total += expense.amount;
+    });
+    emailContent += `<tr style="background-color: #ffffcc; font-weight: bold;">
+      <td colspan="3" style="text-align: right;">總計</td>
+      <td>NT$ ${total.toLocaleString()}</td>
+    </tr>`;
+    emailContent += '</table>';
+  }
+  
+  emailContent += '</body></html>';
+  
+  const attachments = [];
+  const attachmentFiles = fs.readdirSync(ATTACHMENTS_DIR);
+  attachmentFiles.forEach(file => {
+    attachments.push({
+      filename: file,
+      path: path.join(ATTACHMENTS_DIR, file)
+    });
+  });
+  
+  // 發送郵件
+  await sendEmail(recipientEmail, emailContent, attachments);
 }
-const expenses = loadData(EXPENSES_FILE);
-if (expenses.length > 0) {
-emailContent += '<br><h3>💰 花費紀錄</h3>';
-emailContent += '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif;">';
-emailContent += '<tr style="background-color: #FF9800; color: white;"><th>項目</th><th>金額</th><th>類別</th><th>日期時間</th></tr>';
-let total = 0;
-expenses.forEach((expense, index) => {
-  const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
-  emailContent += `<tr style="background-color: ${bgColor};">
-    <td>${expense.item}</td>
-    <td>NT$ ${expense.amount.toLocaleString()}</td>
-    <td>${expense.category}</td>
-    <td>${expense.datetime}</td>
-  </tr>`;
-  total += expense.amount;
-});
 
-emailContent += `<tr style="background-color: #ffffcc; font-weight: bold;">
-  <td colspan="3" style="text-align: right;">總計</td>
-  <td>NT$ ${total.toLocaleString()}</td>
-</tr>`;
-emailContent += '</table>';
-}
-emailContent += '</body></html>';
-const attachments = [];
-const attachmentFiles = fs.readdirSync(ATTACHMENTS_DIR);
-attachmentFiles.forEach(file => {
-attachments.push({
-filename: file,
-path: path.join(ATTACHMENTS_DIR, file)
-});
-});
+// 發送郵件函數
 async function sendEmail(recipientEmail, emailContent, attachments) {
-    const transporter = createTransporter();
-    const mailOptions = {
-        from: `"LINE Bot 助手" <${process.env.SMTP_USER}>`,
-        to: recipientEmail,
-        subject: `LINE 對話紀錄匯出 - ${new Date().toLocaleDateString('zh-TW')}`,
-        html: emailContent,
-        attachments: attachments
-    };
-    await transporter.sendMail(mailOptions);
-    console.log(`郵件已發送到: ${recipientEmail}`);
+  const transporter = createTransporter();
+  const mailOptions = {
+    from: `"LINE Bot 助手" <${process.env.SMTP_USER}>`,
+    to: recipientEmail,
+    subject: `LINE 對話紀錄匯出 - ${new Date().toLocaleDateString('zh-TW')}`,
+    html: emailContent,
+    attachments: attachments
+  };
+  await transporter.sendMail(mailOptions);
+  console.log(`郵件已發送到: ${recipientEmail}`);
 }
+
 // 自動回應
 function generateAutoReply(message) {
-const lowerMessage = message.toLowerCase();
-if (lowerMessage.includes('你好') || lowerMessage.includes('哈囉') || lowerMessage === 'hi' || lowerMessage === 'hello') {
-return '您好!我是您的智能助手 😊\n\n輸入「功能」查看可用功能';
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('你好') || lowerMessage.includes('哈囉') || lowerMessage === 'hi' || lowerMessage === 'hello') {
+    return '您好!我是您的智能助手 😊\n\n輸入「功能」查看可用功能';
+  }
+  if (lowerMessage.includes('謝謝') || lowerMessage.includes('感謝')) {
+    return '不客氣!很高興能幫助您 😊\n有其他需要隨時告訴我';
+  }
+  if (lowerMessage.includes('營業時間') || lowerMessage.includes('服務時間')) {
+    return '我是 24/7 全天候為您服務的智能助手!\n隨時都可以使用記帳、行程管理等功能 😊';
+  }
+  return '我收到您的訊息了!\n\n如需使用功能,請輸入:\n• 「功能」- 查看功能選單\n• 「記帳」- 記錄花費\n• 「新增行程」- 記錄行程\n• 「轉寄對話」- 匯出紀錄';
 }
-if (lowerMessage.includes('謝謝') || lowerMessage.includes('感謝')) {
-return '不客氣!很高興能幫助您 😊\n有其他需要隨時告訴我';
-}
-if (lowerMessage.includes('營業時間') || lowerMessage.includes('服務時間')) {
-return '我是 24/7 全天候為您服務的智能助手!\n隨時都可以使用記帳、行程管理等功能 😊';
-}
-return '我收到您的訊息了!\n\n如需使用功能,請輸入:\n• 「功能」- 查看功能選單\n• 「記帳」- 記錄花費\n• 「新增行程」- 記錄行程\n• 「轉寄對話」- 匯出紀錄';
-}
+
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-console.log(`✅ Server is running on port ${PORT}`);
-console.log(`📁 資料目錄: ${DATA_DIR}`);
-console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
-});</parameter>
-
-
-
+  console.log(`✅ Server is running on port ${PORT}`);
+  console.log(`📁 資料目錄: ${DATA_DIR}`);
+  console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
+});
