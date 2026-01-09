@@ -680,19 +680,22 @@ async function sendEmailSummary(recipientEmail) {
     
     const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
     
-    emailContent += `<tr style="background-color: ${bgColor};">
-      <td>${log.time}
-      <function_calls>
-<invoke name="artifacts">
-<parameter name="command">update</parameter>
-<parameter name="id">server_js_complete</parameter>
-<parameter name="old_str">    emailContent += <tr style="background-color: ${bgColor};">       <td>${log.time}</parameter> <parameter name="new_str">    emailContent += <tr style="background-color: ${bgColor};">
-<td>${log.time}</td>
-<td>${log.user}</td>
-<td>${log.type}</td>
-<td>${content}</td>
-</tr>`;
+conversations.forEach((log, index) => {
+  let content = log.content || '';
+  if (log.type !== 'text') {
+    content = `[${getFileTypeName(log.type)}] ${log.filename || ''}`;
+  }
+
+  const bgColor = index % 2 === 0 ? '#f9f9f9' : 'white';
+
+  emailContent += `<tr style="background-color: ${bgColor};">
+    <td>${log.time}</td>
+    <td>${log.user}</td>
+    <td>${log.type}</td>
+    <td>${content}</td>
+  </tr>`;
 });
+
 emailContent += '</table>';
 const events = loadData(EVENTS_FILE);
 if (events.length > 0) {
@@ -745,7 +748,7 @@ path: path.join(ATTACHMENTS_DIR, file)
 });
 const transporter = createTransporter();
 const mailOptions = {
-from: "LINE Bot 助手" <${process.env.SMTP_USER}>,
+from: `"LINE Bot 助手" <${process.env.SMTP_USER}>`,
 to: recipientEmail,
 subject: LINE 對話紀錄匯出 - ${new Date().toLocaleDateString('zh-TW')},
 html: emailContent,
@@ -771,7 +774,8 @@ return '我收到您的訊息了!\n\n如需使用功能,請輸入:\n• 「功�
 // 啟動伺服器
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-console.log(✅ Server is running on port ${PORT});
-console.log(📁 資料目錄: ${DATA_DIR});
-console.log(📎 附件目錄: ${ATTACHMENTS_DIR});
+console.log(`✅ Server is running on port ${PORT}`);
+console.log(`📁 資料目錄: ${DATA_DIR}`);
+console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });</parameter>
+
