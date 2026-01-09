@@ -79,7 +79,22 @@ function saveData(filename, data) {
     console.error('儲存資料失敗:', err);
   }
 }
+app.get('/', (req, res) => {
+  res.status(200).send('LINE Bot is running! ✅');
+});
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 原有的 webhook 路由
+app.post('/webhook', line.middleware(config), (req, res) => {
+  // ... 你的 webhook 處理代碼
+});
 // Webhook 路由
 app.post('/webhook', line.middleware(config), async (req, res) => {
   try {
@@ -781,4 +796,5 @@ app.listen(PORT, () => {
   console.log(`📁 資料目錄: ${DATA_DIR}`);
   console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });
+
 
