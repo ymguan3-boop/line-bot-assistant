@@ -4,7 +4,6 @@ const line = require('@line/bot-sdk');
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
-
 const app = express();
 
 // LINE Bot 設定
@@ -13,8 +12,10 @@ const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
 };
 
-const client = new line.Client(config);
-
+// 修正:使用新的 MessagingApiClient
+const client = new line.messagingApi.MessagingApiClient({
+  channelAccessToken: config.channelAccessToken
+});
 // Email 設定 - 使用 SMTP
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -831,6 +832,7 @@ app.listen(PORT, () => {
   console.log(`📁 資料目錄: ${DATA_DIR}`);
   console.log(`📎 附件目錄: ${ATTACHMENTS_DIR}`);
 });
+
 
 
 
